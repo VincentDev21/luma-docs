@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luma Language Documentation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+    <header class="header">
+        <div class="logo">
+            <span>⚡</span>
+            <span>Luma</span>
+        </div>
+        <div class="header-links">
+            <a href="https://github.com/Luma-Programming-Language/Luma" target="_blank" class="header-link">
+                <span>GitHub</span>
+            </a>
+            <a href="https://bit.ly/lux-discord" target="_blank" class="header-link">
+                <span>Discord</span>
+            </a>
+        </div>
+        <div class="header-controls">
+            <button class="mobile-menu-btn" onclick="toggleSidebar()">☰ Menu</button>
+            <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar" id="sidebar">
+            <nav id="toc">
+                <ul>
+                    <li><a href="#" onclick="showDefaultContent()">Home</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content" id="content">
+            <div class="loading">Loading documentation...</div>
+        </main>
+    </div>
+
+    <button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">↑</button>
+
+    <script src="script.js"></script>
+</body>
+</html>
