@@ -2,35 +2,6 @@
 
 Luma is a statically typed, compiled programming language designed for systems programming. It combines the low-level control of C with a strong type system and modern safety features that eliminate many common runtime errors.
 
-<!-- ## Table of Contents
-
-- [Language Philosophy](#language-philosophy)
-- [Quick Start](#quick-start)
-- [Type System](#type-system)
-- [Generics](#generics)
-- [Top-Level Bindings with `const`](#top-level-bindings-with-const)
-- [Variables and Mutability](#variables-and-mutability)
-- [Functions](#functions)
-- [Name Resolution](#name-resolution)
-- [Control Flow](#control-flow)
-- [Switch Statements](#switch-statements)
-- [Module System](#module-system)
-- [Built-in Functions](#built-in-functions)
-- [Type Casting System](#type-casting-system)
-- [Array Types](#array-types)
-- [String Literals and String Types](#string-literals-and-string-types)
-- [Pointer Arithmetic](#pointer-arithmetic)
-- [Visibility and Access Control](#visibility-and-access-control)
-- [Memory Management](#memory-management)
-- [Error Handling](#error-handling)
-- [Performance](#performance)
-- [Standard Library](#standard-library)
-- [Safety Features](#safety-features)
-
---- -->
-
-<!-- ## Language Philosophy -->
-
 Luma is built on three core principles:
 
 - **Simplicity**: Minimal syntax with consistent patterns
