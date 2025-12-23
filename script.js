@@ -47,6 +47,9 @@ async function showDocs() {
         const manifest = await response.json();
         generateSidebar(manifest, 'docs/');
         
+        // Build the search index after setting up the sidebar
+        buildSearchIndex();
+
         // Load from the manifest
         if (manifest.length > 0) {
             let defaultFile;
@@ -314,9 +317,6 @@ function parseAndRenderMarkdown(markdown) {
     
     // Setup intersection observer for active section highlighting
     setupScrollSpy();
-    
-    // Build search index
-    setTimeout(() => buildSearchIndex(), 100);
 }
 
 function generateSidebar(manifest, docsDirectory) {
@@ -453,82 +453,79 @@ document.addEventListener('click', (e) => {
 // ===========================
 
 let searchIndex = [];
-let currentDocContent = '';
+let isSearchIndexBuilt = false;
 
-// Build search index from current content
-function buildSearchIndex() {
+// Build search index from all documents in the manifest
+async function buildSearchIndex() {
+    if (isSearchIndexBuilt) return;
+
+    console.log('Building search index...');
     searchIndex = [];
-    const content = document.getElementById('content');
-    
-    // Store full content for context
-    currentDocContent = content.textContent;
-    
-    // Index all headings - make sure they have IDs first
-    const headings = content.querySelectorAll('h1, h2, h3, h4');
-    headings.forEach((heading, idx) => {
-        // Ensure heading has an ID
-        if (!heading.id) {
-            const slug = heading.textContent
-                .toLowerCase()
-                .replace(/[^\w\s-]/g, '')
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-')
-                .trim();
-            heading.id = slug || 'heading-' + idx;
-        }
-        
-        const text = heading.textContent;
-        const id = heading.id;
-        const level = heading.tagName.toLowerCase();
-        
-        // Get surrounding context
-        let context = '';
-        let nextElement = heading.nextElementSibling;
-        while (nextElement && !nextElement.matches('h1, h2, h3, h4')) {
-            context += nextElement.textContent + ' ';
-            nextElement = nextElement.nextElementSibling;
-            if (context.length > 300) break;
-        }
-        
-        searchIndex.push({
-            title: text,
-            id: id,
-            type: 'heading',
-            level: level,
-            content: context.slice(0, 300)
+
+    try {
+        const manifestResponse = await fetch('manifest.json');
+        const manifest = await manifestResponse.json();
+
+        const filesToIndex = [];
+        manifest.forEach(item => {
+            if (typeof item === 'string') {
+                filesToIndex.push(item);
+            } else if (item.files) {
+                filesToIndex.push(...item.files);
+            }
         });
-    });
-    
-    // Index code blocks
-    const codeBlocks = content.querySelectorAll('pre code');
-    codeBlocks.forEach((code, idx) => {
-        const text = code.textContent;
-        const prevHeading = findPreviousHeading(code);
-        
-        searchIndex.push({
-            title: prevHeading ? `Code in: ${prevHeading.textContent}` : `Code block ${idx + 1}`,
-            id: prevHeading?.id || '',
-            type: 'code',
-            content: text.slice(0, 300)
-        });
-    });
-    
-    // Index paragraphs with keywords
-    const paragraphs = content.querySelectorAll('p');
-    paragraphs.forEach(p => {
-        const text = p.textContent;
-        // Only index paragraphs with keywords or longer content
-        if (text.length > 100 || hasKeywords(text)) {
-            const prevHeading = findPreviousHeading(p);
-            
-            searchIndex.push({
-                title: prevHeading ? prevHeading.textContent : 'Documentation',
-                id: prevHeading?.id || '',
-                type: 'content',
-                content: text.slice(0, 300)
-            });
+
+        for (const file of filesToIndex) {
+            try {
+                const response = await fetch(`docs/${file}`);
+                if (!response.ok) continue;
+
+                const markdown = await response.text();
+                const html = marked.parse(markdown);
+
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+
+                // Index headings
+                tempDiv.querySelectorAll('h1, h2, h3, h4').forEach((heading, idx) => {
+                    const slug = heading.textContent.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
+                    const id = slug || `heading-${idx}`;
+                    
+                    searchIndex.push({
+                        title: heading.textContent,
+                        id: id,
+                        file: file,
+                        type: 'heading',
+                        level: heading.tagName.toLowerCase(),
+                        content: heading.nextElementSibling ? heading.nextElementSibling.textContent.slice(0, 300) : ''
+                    });
+                });
+
+                // Index paragraphs
+                tempDiv.querySelectorAll('p').forEach(p => {
+                    const text = p.textContent;
+                    if (text.length > 100 || hasKeywords(text)) {
+                        const prevHeading = findPreviousHeading(p);
+                        searchIndex.push({
+                            title: prevHeading ? prevHeading.textContent : file.replace('.md', ''),
+                            id: prevHeading ? (prevHeading.textContent.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim() || `heading-` + Math.random()) : '',
+                            file: file,
+                            type: 'content',
+                            content: text.slice(0, 300)
+                        });
+                    }
+                });
+
+            } catch (error) {
+                console.warn(`Could not index file ${file}:`, error);
+            }
         }
-    });
+        isSearchIndexBuilt = true;
+        console.log('Search index built.', searchIndex.length, 'items');
+
+    } catch (error) {
+        console.error('Failed to build search index:', error);
+    }
 }
 
 function findPreviousHeading(element) {
@@ -647,21 +644,24 @@ function displaySearchResults(results, query, resultsContainer) {
         resultItem.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            navigateToResult(result.id);
+            navigateToResult(result.file, result.id);
         });
         
         resultsContainer.appendChild(resultItem);
     });
 }
 
-function navigateToResult(id) {
-    console.log('Navigating to ID:', id); // Debug log
-    
+async function navigateToResult(file, id) {
+    console.log('Navigating to file:', file, 'ID:', id);
+
+    // First, navigate to the correct document
+    await navigateTo(file);
+
     const resultsDiv = document.getElementById('searchResults');
     const mobileResultsDiv = document.getElementById('mobileSearchResults');
     const mobileOverlay = document.getElementById('mobileSearchOverlay');
     
-    // Hide search results first
+    // Hide search results
     resultsDiv.classList.remove('active');
     mobileResultsDiv.innerHTML = '';
     mobileOverlay.classList.remove('active');
@@ -703,20 +703,12 @@ function navigateToResult(id) {
                 }, 1500);
             } else {
                 console.warn('Element not found with ID:', id);
-                // If no element with ID found, just scroll to top of content
-                window.scrollTo({
-                    top: 60,
-                    behavior: 'smooth'
-                });
+                window.scrollTo({ top: 60, behavior: 'smooth' });
             }
         }, 150);
     } else {
         console.warn('No ID provided');
-        // No ID provided, scroll to top
-        window.scrollTo({
-            top: 60,
-            behavior: 'smooth'
-        });
+        window.scrollTo({ top: 60, behavior: 'smooth' });
     }
 }
 
