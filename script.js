@@ -26,42 +26,43 @@ let currentStdLibFile = null;
 
 // Auto-load docs.md on page load
 window.addEventListener('DOMContentLoaded', () => {
-    // Get the base path (works for both local and GitHub Pages)
-    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-    
-    // Try multiple possible locations
-    const possiblePaths = [
-        basePath + 'docs.md',
-        basePath + 'DOCS.md',
-        basePath + 'README.md',
-        './docs.md',
-        'docs.md',
-        '../docs.md'
-    ];
-    
-    tryLoadMarkdown(possiblePaths, 0);
+    showDocs();
 });
 
 // Show documentation view
-function showDocs() {
+async function showDocs() {
     currentView = 'docs';
     
     // Update nav buttons
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
+    const navButtons = document.querySelectorAll('.nav-btn');
+    navButtons.forEach(btn => btn.classList.remove('active'));
     
-    // Reload docs
-    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-    const possiblePaths = [
-        basePath + 'docs.md',
-        basePath + 'DOCS.md',
-        basePath + 'README.md',
-        './docs.md',
-        'docs.md',
-        '../docs.md'
-    ];
+    const docsButton = Array.from(navButtons).find(btn => btn.textContent.trim() === 'Documentation');
+    if (docsButton) {
+        docsButton.classList.add('active');
+    }
     
-    tryLoadMarkdown(possiblePaths, 0);
+    try {
+        const response = await fetch('manifest.json');
+        const manifest = await response.json();
+        generateSidebar(manifest, 'docs/');
+        
+        // Load from the manifest
+        if (manifest.length > 0) {
+            let defaultFile;
+            if (typeof manifest[0] === 'string') {
+                defaultFile = manifest[0];
+            } else if (typeof manifest[0] === 'object' && manifest[0].files && manifest[0].files.length > 0) {
+                defaultFile = manifest[0].files[0];
+            }
+            if (defaultFile) {
+                navigateTo(defaultFile);
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load manifest:', error);
+        document.getElementById('content').innerHTML = `<div class="error">Failed to load documentation manifest.</div>`;
+    }
 }
 
 // Show standard library view
@@ -71,6 +72,9 @@ async function showStdLib() {
     // Update nav buttons
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
     event.target.classList.add('active');
+
+    const nav = document.querySelector('#main-nav ul');
+    nav.innerHTML = '';
     
     const contentDiv = document.getElementById('content');
     contentDiv.innerHTML = '<div class="loading">Loading standard library documentation...</div>';
@@ -117,14 +121,15 @@ async function showStdLib() {
 
 // Build sidebar for standard library files
 function buildStdLibSidebar() {
-    const toc = document.getElementById('toc');
+    const nav = document.querySelector('#main-nav ul');
+    nav.innerHTML = '';
     
     const tocHTML = stdLibFiles.map(file => {
         const name = file.name.replace('.md', '');
         return `<li><a href="#" onclick="loadStdLibFileByName('${file.name}'); return false;">${name}</a></li>`;
     }).join('');
     
-    toc.innerHTML = `
+    nav.innerHTML = `
         <div class="sidebar-section-header">Standard Library</div>
         <ul>${tocHTML}</ul>
     `;
@@ -158,7 +163,7 @@ async function loadStdLibFile(file) {
         parseAndRenderMarkdown(markdown);
         
         // Update active state in sidebar
-        document.querySelectorAll('#toc a').forEach(link => {
+        document.querySelectorAll('#main-nav a').forEach(link => {
             link.classList.remove('active');
             if (link.textContent === file.name.replace('.md', '')) {
                 link.classList.add('active');
@@ -307,9 +312,6 @@ function parseAndRenderMarkdown(markdown) {
         wrapper.appendChild(copyBtn);
     });
     
-    // Generate table of contents
-    generateTOC();
-    
     // Setup intersection observer for active section highlighting
     setupScrollSpy();
     
@@ -317,77 +319,95 @@ function parseAndRenderMarkdown(markdown) {
     setTimeout(() => buildSearchIndex(), 100);
 }
 
-function generateTOC() {
-    // Skip TOC generation for stdlib view - it's already built
-    if (currentView === 'stdlib') {
-        return;
-    }
-    
-    const content = document.getElementById('content');
-    const headings = content.querySelectorAll('h1, h2, h3, h4');
-    const toc = document.getElementById('toc');
-    
-    // Add IDs to ALL headings (not just h1, h2)
-    headings.forEach((heading, index) => {
-        if (!heading.id) {
-            // Create a slug from the heading text
-            const slug = heading.textContent
-                .toLowerCase()
-                .replace(/[^\w\s-]/g, '')
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-')
-                .trim();
-            heading.id = slug || 'heading-' + index;
-        }
-    });
-    
-    // Build hierarchical TOC structure (only h1 and h2 for TOC)
-    const tocHeadings = content.querySelectorAll('h1, h2');
-    let tocHTML = '<ul class="toc-list">';
-    let currentH1 = null;
-    let h2List = [];
-    
-    tocHeadings.forEach((heading, index) => {
-        const level = heading.tagName.toLowerCase();
-        const text = heading.textContent;
-        const id = heading.id;
+function generateSidebar(manifest, docsDirectory) {
+    const nav = document.querySelector('#main-nav ul');
+    nav.innerHTML = ''; 
+
+    const basePath = window.location.pathname.substring(
+        0,
+        window.location.pathname.lastIndexOf("/") + 1
+    );
+
+    const createLink = (file) => {
+        const filePath = basePath + docsDirectory + file;
+        const fileName = file.split('/').pop().replace(/\.md$/, '').replace(/_/g, ' ');
         
-        if (level === 'h1') {
-            // Close previous h1's h2 list if exists
-            if (currentH1 && h2List.length > 0) {
-                tocHTML += '<ul class="toc-sublist">';
-                h2List.forEach(h2 => {
-                    tocHTML += `<li><a href="#${h2.id}" data-level="h2">${h2.text}</a></li>`;
-                });
-                tocHTML += '</ul>';
-                h2List = [];
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = `#${file}`; 
+        a.textContent = fileName;
+        a.onclick = (e) => {
+            e.preventDefault();
+            navigateTo(file);
+
+            if (window.innerWidth <= 768) {
+                document.getElementById("sidebar").classList.remove("active");
             }
+        };
+        li.appendChild(a);
+        return li;
+    };
+
+    // Render items from the manifest
+    manifest.forEach(item => {
+        if (typeof item === 'string') {
+            nav.appendChild(createLink(item));
+        } 
+        else if (typeof item === 'object' && item.folder && item.files) {
+            const folderLi = document.createElement('li');
+            folderLi.className = 'nav-item'; 
+
+            const details = document.createElement('button');
+            const title = document.createElement('span');
+            title.className = 'folder-title';
+            const icon = document.createElement('span');
+            icon.className = 'bi bi-caret-right-fill folder-caret';
+            details.className = 'folder-details';
+            title.textContent = item.folder.replace(/_/g, ' ').replace(/-/g, ' ');
+            details.appendChild(title);
+            details.appendChild(icon);
             
-            // Add h1
-            tocHTML += `<li class="toc-h1"><a href="#${id}" data-level="h1">${text}</a>`;
-            currentH1 = { id, text };
-        } else if (level === 'h2') {
-            // Collect h2s under current h1
-            h2List.push({ id, text });
+            const subList = document.createElement('ul');
+            subList.style.display = 'none'; 
+            subList.className = 'sub-menu';
+            item.files.forEach(file => subList.appendChild(createLink(file)));
+
+            details.onclick = () => {
+                const isExpanded = subList.style.display === 'block';
+                subList.style.display = isExpanded ? 'none' : 'block';
+                folderLi.classList.toggle('open', !isExpanded);
+            };
+            
+            folderLi.appendChild(details);
+            folderLi.appendChild(subList);
+            nav.appendChild(folderLi);
         }
     });
-    
-    // Close last h1's h2 list if exists
-    if (currentH1 && h2List.length > 0) {
-        tocHTML += '<ul class="toc-sublist">';
-        h2List.forEach(h2 => {
-            tocHTML += `<li><a href="#${h2.id}" data-level="h2">${h2.text}</a></li>`;
+}
+
+async function navigateTo(file) {
+    const contentDiv = document.getElementById('content');
+    contentDiv.innerHTML = '<div class="loading">Loading...</div>';
+
+    try {
+        const response = await fetch(`docs/${file}`);
+        if (!response.ok) {
+            throw new Error(`Failed to load ${file}`);
+        }
+        const markdown = await response.text();
+        parseAndRenderMarkdown(markdown);
+
+        // Update active state in sidebar
+        document.querySelectorAll('#main-nav a').forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === `#${file}`) {
+                link.classList.add('active');
+            }
         });
-        tocHTML += '</ul>';
+
+    } catch (error) {
+        contentDiv.innerHTML = `<div class="error">${error.message}</div>`;
     }
-    
-    if (currentH1) {
-        tocHTML += '</li>'; // Close last h1
-    }
-    
-    tocHTML += '</ul>';
-    
-    toc.innerHTML = tocHTML;
 }
 
 function setupScrollSpy() {
