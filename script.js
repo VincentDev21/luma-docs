@@ -26,11 +26,23 @@ let currentStdLibFile = null;
 
 // Auto-load docs.md on page load
 window.addEventListener('DOMContentLoaded', () => {
-    showDocs();
+    window.addEventListener('hashchange', () => {
+        const file = window.location.hash.substring(1);
+        if (file && currentView === 'docs') {
+            navigateTo(file, false); 
+        }
+    });
+
+    const hash = window.location.hash.substring(1);
+    if (hash) {
+        showDocs(hash);
+    } else {
+        showDocs();
+    }
 });
 
 // Show documentation view
-async function showDocs() {
+async function showDocs(fileToLoad = null) {
     currentView = 'docs';
     
     // Update nav buttons
@@ -50,8 +62,9 @@ async function showDocs() {
         // Build the search index after setting up the sidebar
         buildSearchIndex();
 
-        // Load from the manifest
-        if (manifest.length > 0) {
+        if (fileToLoad) {
+            navigateTo(fileToLoad, false);
+        } else if (manifest.length > 0) {
             let defaultFile;
             if (typeof manifest[0] === 'string') {
                 defaultFile = manifest[0];
@@ -334,7 +347,7 @@ function generateSidebar(manifest, docsDirectory) {
         
         const li = document.createElement('li');
         const a = document.createElement('a');
-        a.href = `#${file}`; 
+        a.href = `${file}`; 
         a.textContent = fileName;
         a.onclick = (e) => {
             e.preventDefault();
@@ -385,7 +398,12 @@ function generateSidebar(manifest, docsDirectory) {
     });
 }
 
-async function navigateTo(file) {
+async function navigateTo(file, pushState = true) {
+    // Update the URL hash
+    if (pushState && window.location.hash !== `#${file}`) {
+        history.pushState({ file: file }, '', `#${file}`);
+    }
+
     const contentDiv = document.getElementById('content');
     contentDiv.innerHTML = '<div class="loading">Loading...</div>';
 
@@ -445,9 +463,20 @@ function setupScrollSpy() {
 
 // Smooth scrolling for anchor links
 document.addEventListener('click', (e) => {
-    if (e.target.tagName === 'A' && e.target.getAttribute('href')?.startsWith('#')) {
+    const link = e.target.closest('a');
+    if (!link) return;
+
+    const href = link.getAttribute('href');
+
+    if (href && href.endsWith('.md')) {
         e.preventDefault();
-        const id = e.target.getAttribute('href').slice(1);
+        navigateTo(href);
+        return;
+    }
+
+    if (href?.startsWith('#')) {
+        e.preventDefault();
+        const id = href.slice(1);
         const element = document.getElementById(id);
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
