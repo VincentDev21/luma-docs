@@ -316,7 +316,7 @@ function parseAndRenderMarkdown(markdown) {
     });
     
     // Setup intersection observer for active section highlighting
-    setupScrollSpy();
+    // setupScrollSpy();
 }
 
 function generateSidebar(manifest, docsDirectory) {
@@ -400,10 +400,22 @@ async function navigateTo(file) {
         // Update active state in sidebar
         document.querySelectorAll('#main-nav a').forEach(link => {
             link.classList.remove('active');
-            if (link.getAttribute('href') === `#${file}`) {
-                link.classList.add('active');
-            }
         });
+
+        const activeLink = document.querySelector(`#main-nav a[href="#${file}"]`);
+        if (activeLink) {
+            activeLink.classList.add('active');
+
+            // Expand parent folder if it exists
+            const parentSubMenu = activeLink.closest('.sub-menu');
+            if (parentSubMenu) {
+                const parentNavItem = parentSubMenu.closest('.nav-item');
+                if (parentNavItem) {
+                    parentSubMenu.style.display = 'block';
+                    parentNavItem.classList.add('open');
+                }
+            }
+        }
 
     } catch (error) {
         contentDiv.innerHTML = `<div class="error">${error.message}</div>`;

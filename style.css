@@ -757,3 +757,11 @@ summary::marker {
     padding: 2rem;
     color: var(--text-secondary);
 }
+
+.folder-caret {
+    transition: transform 0.2s ease-in-out;
+}
+
+.nav-item.open .folder-caret {
+    transform: rotate(90deg);
+}
