@@ -198,4 +198,3 @@ const unsafe_access -> fn (arr: *int, index: int) int {
 
 ---
 
-Next: [Type Casting](type-casting.md)

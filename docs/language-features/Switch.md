@@ -192,5 +192,3 @@ const process_input -> fn (cmd: byte) void {
 4. **Group related values**: Use comma-separated lists
 
 ---
-
-Next: [Module System](modules.md)

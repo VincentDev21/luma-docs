@@ -263,4 +263,3 @@ let byte_ptr: *byte = cast<*byte>(&int_val);  // Platform-dependent
 
 ---
 
-Next: [Performance](performance.md)

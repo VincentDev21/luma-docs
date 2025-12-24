@@ -192,5 +192,3 @@ let typed: *int = cast<*int>(ptr);  // void* to int*
 | `cast<T>(...)` | Convert types | `cast<int>(3.14)` |
 
 ---
-
-Next: [Standard Library](stdlib.md)

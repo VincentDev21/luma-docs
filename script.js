@@ -420,7 +420,7 @@ async function navigateTo(file, pushState = true) {
             link.classList.remove('active');
         });
 
-        const activeLink = document.querySelector(`#main-nav a[href="#${file}"]`);
+        const activeLink = document.querySelector(`#main-nav a[href="${file}"]`);
         if (activeLink) {
             activeLink.classList.add('active');
 

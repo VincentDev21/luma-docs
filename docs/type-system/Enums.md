@@ -118,5 +118,3 @@ const main -> fn () int {
 - **Namespace Isolation**: Variants scoped to enum name
 
 ---
-
-Next: [Structures](structs.md)

@@ -165,5 +165,3 @@ let result: float = point.distance_to(other_point);
 ```
 
 ---
-
-Next: [Generics](generics.md)

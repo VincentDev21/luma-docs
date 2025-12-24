@@ -267,4 +267,3 @@ const main -> fn () int {
 
 ---
 
-Next: [Pointer Arithmetic](pointer-arithmetic.md)

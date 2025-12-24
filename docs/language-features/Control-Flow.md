@@ -194,4 +194,3 @@ loop [i: int = 0](i < 10 && !found) : (++i) {
 
 ---
 
-Next: [Switch Statements](switch.md)

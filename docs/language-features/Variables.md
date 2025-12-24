@@ -116,5 +116,3 @@ const main -> fn () int {
 | **Use Case** | Functions, types, constants | Local computation |
 
 ---
-
-Next: [Functions](functions.md)

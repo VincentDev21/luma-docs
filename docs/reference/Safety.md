@@ -315,5 +315,3 @@ const main -> fn () int {
 ```
 
 ---
-
-Next: [Quick Reference](quick-reference.md)

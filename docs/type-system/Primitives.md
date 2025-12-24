@@ -106,5 +106,3 @@ let primes: [int; 5] = [2, 3, 5, 7, 11];
 ```
 
 ---
-
-Next: [Enumerations](enums.md)
